@@ -1,0 +1,65 @@
+- name: Create folder to store client files
+  file:
+    path: "/home/ubuntu/vpn_clients/{{ username }}"
+    state: directory
+    
+- name: "Build client keys"
+  command: ./easyrsa --batch gen-req {{ username }} nopass
+  args:
+    chdir: "{{ca_dir}}/easyrsa3"
+    creates: "{{ca_dir}}/easyrsa3/pki/private/{{ username }}.key"
+
+- name: "Sign client keys"
+  command: ./easyrsa --batch sign-req client {{ username }}
+  args:
+    chdir: "{{ca_dir}}/easyrsa3"
+    creates: "{{ca_dir}}/easyrsa3/pki/issued/{{username}}.crt"
+
+- name: Copy ta.key
+  become: true
+  shell: "cp /etc/openvpn/ta.key /home/ubuntu/vpn_clients/{{username}}/ta.key"
+  args:
+    creates: "/home/ubuntu/vpn_clients/{{ username }}/ta.key"
+
+- name: Copy certification files
+  become: true
+  shell: "cp {{ ca_dir }}/easyrsa3/pki/{{ item }} /home/ubuntu/vpn_clients/{{username}}"
+  args:
+    creates: "/home/ubuntu/vpn_clients/{{ username }}/{{ item }}"
+  with_items:
+    - "private/{{username}}.key"
+    - "ca.crt"
+    - "issued/{{username}}.crt"
+
+- name: Generate the OpenVPN client config
+  template:
+    src: openvpn_client.ovpn.j2
+    dest: "/home/ubuntu/vpn_clients/{{ username }}/{{ username }}.ovpn"
+
+- name: append certs and keys
+  become: yes
+  raw: "echo '<ca>' >> /home/ubuntu/vpn_clients/{{ username }}/{{ username }}.ovpn"
+- name: append certs and keys
+  become: yes
+  raw: "cat /etc/openvpn/ca.crt >> /home/ubuntu/vpn_clients/{{ username }}/{{ username }}.ovpn"
+- name: append certs and keys
+  become: yes
+  raw: "echo '</ca>\n<cert>' >> /home/ubuntu/vpn_clients/{{ username }}/{{ username }}.ovpn"
+- name: append certs and keys
+  become: yes
+  raw: "cat /home/ubuntu/vpn_clients/{{ username }}/{{ username }}.crt >> /home/ubuntu/vpn_clients/{{ username }}/{{ username }}.ovpn"
+- name: append certs and keys
+  become: yes
+  raw: "echo '</cert>\n<key>' >> /home/ubuntu/vpn_clients/{{ username }}/{{ username }}.ovpn"
+- name: append certs and keys
+  become: yes
+  raw: "cat /home/ubuntu/vpn_clients/{{ username }}/{{ username }}.key >> /home/ubuntu/vpn_clients/{{ username }}/{{ username }}.ovpn"
+- name: append certs and keys
+  become: yes
+  raw: "echo '</key>\n<tls-auth>' >> /home/ubuntu/vpn_clients/{{ username }}/{{ username }}.ovpn"
+- name: append certs and keys
+  become: yes
+  raw: "cat /home/ubuntu/vpn_clients/{{ username }}/ta.key >> /home/ubuntu/vpn_clients/{{ username }}/{{ username }}.ovpn"
+- name: append certs and keys
+  become: yes
+  raw: "echo '</tls-auth>' >> /home/ubuntu/vpn_clients/{{ username }}/{{ username }}.ovpn"

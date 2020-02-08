@@ -1,0 +1,54 @@
+- include_vars: ../../../vars.yml
+
+- name: Enable IPv4 traffic forwarding
+  become: yes
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: 1
+    sysctl_set: yes
+    state: present
+    reload: yes
+
+- name: Allow SSH traffic ingres
+  become: yes
+  iptables:
+    protocol: tcp
+    chain: INPUT
+    source: 0.0.0.0/0
+    destination_port: 22
+    jump: ACCEPT
+
+- name: Move traffic from 1194 localhost to ovpn_port
+  become: yes
+  iptables:
+    table: nat
+    protocol: udp
+    chain: PREROUTING
+    source: 0.0.0.0/0
+    destination_port: "{{ ovpn_port }}"
+    to_ports: 1194
+    jump: REDIRECT
+
+- name: SNAT VPN traffic
+  become: yes
+  command: /sbin/iptables -t nat -A POSTROUTING -s {{ ovpn_cidr }} -o eth0 -j SNAT --to-source {{ vpn_gateway }}
+
+- name: Allow redirect-port traffic
+  become: yes
+  command: /sbin/iptables -A INPUT -p udp -m udp --dport {{ ovpn_port }} -j ACCEPT
+
+- name: Allow VPN traffic
+  become: yes
+  command: /sbin/iptables -A INPUT -p udp -m udp --dport 1194 -j ACCEPT
+
+- name: Allow loopback
+  become: yes
+  command: /sbin/iptables -A INPUT -i lo -j ACCEPT
+
+- name: forward traffic from outside
+  become: yes
+  command: /sbin/iptables -A FORWARD -i eth0 -o tun+ -j ACCEPT
+
+- name: forward traffic from inside
+  become: yes
+  command: /sbin/iptables -A FORWARD -i tun+ -o eth0 -j ACCEPT

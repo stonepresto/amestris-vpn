@@ -1,0 +1,26 @@
+- include_vars: ../../../vars.yml
+
+- name: Install required packages
+  become: yes
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - openssl
+    - openvpn
+    - openvpn-systemd-resolved
+
+- include: server_keys.yml
+
+- name: Copy OpenVPN configuration file
+  become: yes
+  template:
+    src: openvpn_server.conf.j2
+    dest: /etc/openvpn/{{ ca_key_name }}.conf
+
+- name: Restart the openvpn service
+  become: yes
+  service:
+    name: "openvpn@{{ ca_key_name }}"
+    enabled: yes
+    state: restarted

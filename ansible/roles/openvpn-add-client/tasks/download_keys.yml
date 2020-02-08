@@ -1,0 +1,9 @@
+- name: Download the client file
+  fetch:
+    src: "/home/ubuntu/vpn_clients/{{ username }}/{{ username }}.ovpn"
+    dest: "{{ output }}"
+    flat: yes
+
+- name: Output downloaded path
+  debug:
+    msg: "Downloaded client vpn files to {{ output }}"

@@ -1,0 +1,16 @@
+ovpn_cidr: 10.11.12.0/24
+ovpn_gateway: 10.11.12.1 255.255.255.0
+ovpn_network: 10.11.12.0 255.255.255.0
+ovpn_dhcp_pool: 10.11.12.2 10.11.12.100 255.255.255.0
+ovpn_push_routes :
+  - 172.20.0.0 255.255.0.0
+
+ca_dir: /home/ubuntu/ca
+
+ca_key_country: US
+ca_key_province: New York
+ca_key_city: New York
+ca_key_org: Anonymous
+ca_key_email: anonymous@example.com
+ca_key_org_unit: anonymous
+ca_key_name: anonymous

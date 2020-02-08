@@ -1,0 +1,184 @@
+#!/bin/bash
+# written by: stonepresto
+# PURPOSE:
+#   Provide a easy spin-up & spin-down VPN on infrastructure owned by the client. This avoids 
+# any risk of third-party traffic capture, such as the issues that arose with PIA, as well as
+# protection against breaches of PKI such as the NordVPN case.
+
+# GLOBALS
+
+REGIONS=("us-east-2" "us-east-1" "us-west-1" "us-west-2" "ap-east-1" "ap-south-1" "ap-northeast-3" "ap-northeast-2" "ap-northeast-1" "ap-southeast-1" "ap-southeast-2" "ca-central-1" "cn-north-1" "cn-northwest-1" "eu-central-1" "eu-west-1" "eu-west-2" "eu-west-3" "eu-north-1" "me-south-1" "sa-east-1")
+MAP=("Ohio, US" "N. Virginia, US" "N. California, US" "Oregon, US" "Hong Kong, China" "Mumbai, India" "Osaka, Japan" "Seoul, South Korea" "Tokyo, Japan" "Singapore" "Sydney, Australia" "Central Canada" "Beijing, China" "Ningxia, China" "Frankfurt, Germany" "Ireland" "London, UK" "Paris, France" "Stockholm, Sweden" "Bahrain" "Sao Paulo, Brazil")
+REGION_INDEX=""
+REGION=""
+PORT=""
+DRYRUN=0
+CLIENTNAME="client"
+ADD=0
+
+# HELPERS
+
+list-regions() {
+    for i in $(seq 0 $(expr ${#REGIONS[@]} - 1 )); do
+        echo -e "[${i}] ${REGIONS[i]}   \t${MAP[i]}"
+    done
+    exit
+}
+
+parse-region() {
+
+    if [[ "$1" -gt 20 || "$1" -lt 0 ]]; then
+        echo "[!] Invalid region index ${REGION_INDEX}, use -l|--list to list indices"
+        exit
+    fi
+
+    if [[ "$PORT" -eq "" ]]; then
+        echo "[#] Using default port 443"
+        PORT="443"
+    fi
+
+    REGION="${REGIONS[$REGION_INDEX]}"
+
+    if [[ "$REGION" -eq "" ]]; then
+        echo "[!] Invalid region index ${REGION_INDEX}, use -l|--list to list indices"
+        exit
+    fi
+    
+    # backup previous config
+    mv config.json config.json.bak 2>/dev/null
+
+    # build config.json
+    echo ""
+    cat config.skel | sed "s/REGION-REPLACE/${REGION}/g" \
+        | sed "s/PORT-REPLACE/${PORT}/g" \
+        | tee config.json
+    echo ""
+
+}
+
+terraform-build() {
+    cd terraform/ && terraform init
+
+    if [[ $DRYRUN -eq 1 ]]; then
+        terraform plan --var-file=../config.json
+        exit
+    fi
+    terraform apply --var-file=../config.json
+    cd ..
+}
+
+terraform-destroy() {
+    cd terraform
+    terraform destroy --var-file=../config.json
+    cd ..
+    exit
+}
+
+ansible-provision() {
+    cd ansible/
+    sleep 5 # dumb-sleep, infra needs a sec to be available, todo: execute on ping success
+    if [ "$CLIENTNAME" == "client" ]; then
+        echo "[#] Using default client name '$CLIENTNAME'"
+    fi
+
+    ansible-playbook -i inventory openvpn_install.yml -e "username=$CLIENTNAME" -e "output=/tmp/$CLIENTNAME.ovpn"
+    ls -la "/tmp/$CLIENTNAME.ovpn"
+    cd ..
+}
+
+ansible-adduser() {
+    cd ansible/
+    if [ "$CLIENTNAME" == "client" ]; then
+        echo "[#] Using default client name '$CLIENTNAME'"
+    fi
+    ansible-playbook -i inventory openvpn_add_client.yml -e "username=$CLIENTNAME" -e "output=/tmp/$CLIENTNAME.ovpn"
+    ls -la "/tmp/$CLIENTNAME.ovpn"
+    cd ..
+}
+
+
+# MAIN
+
+main() {
+    if [[ $ADD -ne 1 ]]; then
+        parse-region
+        terraform-build
+        ansible-provision
+    else
+        ansible-adduser
+    fi
+    echo "[#] Exiting..."
+    exit
+}
+
+usage() {
+    echo -e "\n  ->> AMESTRIS <<-\n"\
+        " ->> by stonepresto <<-\n"\
+        "\n  USAGE:\n"\
+        "  ${0} [-h|--help]\n"\
+        "    -l|--list \t\t\t\tList indices of regions and their location\n"\
+        "    -r|--region <aws_region>\t\tSpecify a region by index (--list)\n"\
+        "    -p|--port <listen_port>\t\tPort for OpenVPN to use\n"\
+        "    -u|--username <username>\t\tUsername for OpenVPN client\n"\
+        "    -a|--addclient\t\t\tAdd a client instead of building VPN\n"\
+        "    -d|--dryrun\t\t\tDo a terraform dryrun instead of applying\n"\
+        "    -D|--destroy\t\t\tDestroy amestris\n"
+    exit
+}
+
+# INIT
+
+PARAMS=""
+
+if [[ "$#" -lt 1 ]]; then
+    usage
+fi
+
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in 
+        -h|--help)
+            usage
+            shift
+            ;;
+        -l|--list)
+            list-regions
+            shift
+            ;;
+        -r|--region)
+            REGION_INDEX="${2}"
+            shift
+            shift
+            ;;
+        -p|--port)
+            PORT="${2}"
+            shift
+            shift
+            ;;
+        -d|--dryrun)
+            DRYRUN=1
+            shift
+            ;;
+        -a|--addclient)
+            ADD=1
+            shift
+            ;;
+        -u|--username)
+            CLIENTNAME="$2"
+            shift
+            shift
+            ;;
+        -D|--destroy)
+            terraform-destroy
+            ;;
+        -*|--*)
+            echo "[!] Unsupported arg ${1}"
+            shift
+            ;;
+        *)
+            PARAMS+=("$1")
+            shift
+            ;;
+    esac
+done
+
+main

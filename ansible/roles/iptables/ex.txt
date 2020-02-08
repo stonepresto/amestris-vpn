@@ -1,0 +1,17 @@
+-P INPUT DROP
+-P FORWARD DROP
+-P OUTPUT ACCEPT
+-A INPUT -i lo -j ACCEPT
+-A INPUT -p udp -m udp --dport 1194 -j ACCEPT
+-A INPUT -p udp -m udp --dport 53 -j ACCEPT
+-A INPUT -p tcp -m tcp --dport 22 -j ACCEPT
+-A FORWARD -i eth0 -o tun+ -j ACCEPT
+-A FORWARD -i tun+ -o eth0 -j ACCEPT
+
+
+-P PREROUTING ACCEPT
+-P INPUT ACCEPT
+-P OUTPUT ACCEPT
+-P POSTROUTING ACCEPT
+-A PREROUTING -p udp -m udp --dport 53 -j REDIRECT --to-ports 1194
+-A POSTROUTING -s 10.11.12.0/24 -o eth0 -j SNAT --to-source 172.20.3.145
