@@ -1,0 +1,5 @@
+*.terraform/*
+terraform/terraform.*
+ansible/inventory
+config.json*
+ansible/*.retry
