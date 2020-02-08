@@ -76,7 +76,11 @@ terraform-destroy() {
 
 ansible-provision() {
     cd ansible/
-    sleep 5 # dumb-sleep, infra needs a sec to be available, todo: execute on ping success
+    publicip=$(cat inventory | grep public_ip | cut -d '=' -f 2)
+    nc -nvvz "${publicip}" 22 >/dev/null 2>/dev/null
+    while [ $? != 0 ]; do
+        nc -nvvz "${publicip}" 22 >/dev/null 2>/dev/null
+    done
     if [ "$CLIENTNAME" == "client" ]; then
         echo "[#] Using default client name '$CLIENTNAME'"
     fi
