@@ -22,6 +22,12 @@ The bash wrapper extends the functionality marblecodes wrote to make it a much m
 
 #### Install
 
+Build SSH keys.
+
+```
+ssh-keygen -t rsa -C "anonymous@example.com" -b 4096 -f ~/.ssh/amestris-vpn
+```
+
 ```
 snap install terraform
 snap install aws
