@@ -1,0 +1,15 @@
+options {
+	directory "/var/cache/bind";
+	recursion yes;
+	allow-query { {{ ovpn_cidr }}; 127.0.0.1; };
+	forwarders {
+		1.1.1.1;
+		8.8.8.8;
+	};
+	forward only;
+
+	dnssec-validation auto;
+
+	auth-nxdomain no;    # conform to RFC1035
+};
+
