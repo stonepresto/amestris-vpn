@@ -1,5 +1,7 @@
 # amestris-vpn
 
+### v1.0.1
+
 This codebase used [marblecodes](https://github.com/marblecodes/openvpn-aws-tf-ansible) OpenVPN solution as a skeleton, however enough modifications have been made to justify another repo. I apologize for not properly forking the repository, I originally did not intend to make this fork public.
 
 The bash wrapper extends the functionality marblecodes wrote to make it a much more user-friendly experience, as well as much faster by automatically retrieving the instance ID and Elastic IP.
