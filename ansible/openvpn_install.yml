@@ -18,6 +18,7 @@
   gather_facts: no
   roles:
     - common
+    - bind9
     - iptables
     - openvpn
     - { role: openvpn-add-client, when: (username is defined) and (output is defined) }
