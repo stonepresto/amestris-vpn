@@ -27,16 +27,3 @@
     dest: /etc/hosts
     line: "{{ vpn_gateway }} vpn"
     state: present
-
-- name: Install bind9
-  become: yes
-  package:
-    name: bind9
-    state: present
-
-- name: Copy bind9 conf to file system
-  become: yes
-  template:
-    src: bind9.j2
-    dest: /etc/bind/named.conf.options
-
